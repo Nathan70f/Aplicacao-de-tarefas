@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>ToDo React (Completo)</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      margin: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      transition: 0.3s;
+    }
+
+    :root {
+      --bg: #f2f2f2;
+      --text: #000;
+    }
+
+    body.dark {
+      --bg: #121212;
+      --text: #fff;
+    }
+
+    .task {
+      background: #fff;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    body.dark .task {
+      background: #1f1f1f;
+    }
+
+    .done {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    input[type="text"] {
+      padding: 8px;
+      width: 60%;
+    }
+
+    button {
+      padding: 8px;
+      margin: 5px 5px 5px 0;
+    }
+
+    .top {
+      margin-bottom: 20px;
+    }
+
+    .filters {
+      margin: 15px 0;
+    }
+
+    .filters button.active {
+      font-weight: bold;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React e Babel -->
+  <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+  <!-- App React -->
+  <script type="text/babel">
+    const App = () => {
+      const [tasks, setTasks] = React.useState([]);
+      const [text, setText] = React.useState("");
+      const [editingId, setEditingId] = React.useState(null);
+      const [dark, setDark] = React.useState(localStorage.getItem("theme") === "dark");
+      const [filter, setFilter] = React.useState("all");
+
+      React.useEffect(() => {
+        const saved = localStorage.getItem("tasks");
+        if (saved) setTasks(JSON.parse(saved));
+      }, []);
+
+      React.useEffect(() => {
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+      }, [tasks]);
+
+      React.useEffect(() => {
+        document.body.classList.toggle("dark", dark);
+        localStorage.setItem("theme", dark ? "dark" : "light");
+      }, [dark]);
+
+      const addOrEditTask = () => {
+        if (text.trim() === "") return;
+
+        if (editingId) {
+          setTasks(tasks.map(task =>
+            task.id === editingId ? { ...task, text } : task
+          ));
+          setEditingId(null);
+        } else {
+          setTasks([...tasks, { id: Date.now(), text, done: false }]);
+        }
+        setText("");
+      };
+
+      const removeTask = id => setTasks(tasks.filter(task => task.id !== id));
+
+      const toggleDone = id => {
+        setTasks(tasks.map(task =>
+          task.id === id ? { ...task, done: !task.done } : task
+        ));
+      };
+
+      const startEdit = task => {
+        setText(task.text);
+        setEditingId(task.id);
+      };
+
+      const filteredTasks = tasks.filter(task => {
+        if (filter === "active") return !task.done;
+        if (filter === "done") return task.done;
+        return true;
+      });
+
+      const exportJSON = () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks, null, 2));
+        const link = document.createElement("a");
+        link.setAttribute("href", dataStr);
+        link.setAttribute("download", "tarefas.json");
+        link.click();
+      };
+
+      return (
+        <div>
+          <div className="top">
+            <h2>Lista de Tarefas</h2>
+            <button onClick={() => setDark(!dark)}>
+              {dark ? "Modo Claro" : "Modo Escuro"}
+            </button>
+            <button onClick={exportJSON}>Exportar JSON</button>
+          </div>
+
+          <input
+            type="text"
+            value={text}
+            placeholder="Digite a tarefa"
+            onChange={(e) => setText(e.target.value)}
+          />
+          <button onClick={addOrEditTask}>
+            {editingId ? "Salvar" : "Adicionar"}
+          </button>
+
+          <div className="filters">
+            <button
+              className={filter === "all" ? "active" : ""}
+              onClick={() => setFilter("all")}
+            >Todas</button>
+            <button
+              className={filter === "active" ? "active" : ""}
+              onClick={() => setFilter("active")}
+            >Ativas</button>
+            <button
+              className={filter === "done" ? "active" : ""}
+              onClick={() => setFilter("done")}
+            >Concluídas</button>
+          </div>
+
+          {filteredTasks.length === 0 && <p>Nenhuma tarefa aqui!</p>}
+
+          {filteredTasks.map(task => (
+            <div key={task.id} className="task">
+              <span
+                className={task.done ? "done" : ""}
+                onClick={() => toggleDone(task.id)}
+              >
+                {task.text}
+              </span>
+              <div>
+                <button onClick={() => startEdit(task)}>Editar</button>
+                <button onClick={() => removeTask(task.id)}>Excluir</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    ReactDOM.render(<App />, document.getElementById("root"));
+  </script>
+</body>
+</html>
